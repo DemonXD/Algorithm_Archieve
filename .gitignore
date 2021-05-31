@@ -1,4 +1,7 @@
 .vscode/
 *.db
 *.sqlite
-**/testfile
+**/testfile/*.txt
+**/testfile/*.csv
+**/resultfile/*.txt
+**/resultfile/*.csv
