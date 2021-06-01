@@ -6,49 +6,58 @@
 #################################
 # -*- coding: utf-8 -*-
 
-###############pandas 版###############
+import os
 
-import time
-import pandas as pd
-from tqdm import tqdm
-i = 0
- 
-def reader_pandas(file, sep='\n', chunkSize=5000000, patitions=21, header=None) -> None:
-    """
-        Input:
-            :paras file：文件名；
-            :paras sep：读入时按此分隔符分割
-            :paras chunkSize：切割后每个小文件的大小
-            :paras patitions：进度条大小
-        Output:
-            None
-    """
-    reader = pd.read_csv(file, iterator=True)
-    chunks = []
-    i = 0
-    with tqdm(range(patitions), 'Reading ...') as t:
-        for _ in t:
-            try:
-                chunk = reader.get_chunk(chunkSize)
-                i += 1
-                chunk.to_csv('sorted' + str(i) + '.csv', index=False, header=None)
-                # chunks.append(chunk)
-            except StopIteration:
-                break
+def save_file(l, fileno):
+    filepath = "testfile/resultfile/{}" .format(fileno)
+
+    f = open(filepath, 'a')
+    for i in l:
+        f.write("{}".format(i))
+        f.write("\n")
+    f.close()
+    return filepath
 
 
+def nw_merge(files):
+    fs = [open(file_) for file_ in files]
+    # 用来记录每一路当前最小值。
+    min_map = {}
+    out = open("testfile/out", "a")
+    for f in fs:
+        read = f.readline()
+        if read:
+            min_map[f] = int(read.strip())
 
+    # 将最小值取出，　并将该最小值所在的那一路做对应的更新
+    while min_map:
+        min_ = min(min_map.items(), key = lambda x: x[1])
+        min_f, min_v = min_
+        out.write("{}".format(min_v))
+        out.write("\n")
+        nextline = min_f.readline() 
+        if nextline:
+            min_map[min_f] = int(nextline.strip())
+        else:
+            del min_map[min_f]
 
+def split_file(file_path, block_size):
+    f = open(file_path, 'r')
+    fileno = 1
+    files = []
+    while True:
+        lines = f.readlines(block_size)
+        if not lines:
+            break
+        lines = [int(i.strip()) for i in lines]
+        lines.sort()
+        files.append(save_file(lines, fileno))
+        fileno += 1
+    return files
 
-
-#################yield 版####################
-
-def read_file(fpath): 
-   BLOCK_SIZE = 1024 
-   with open(fpath, 'rb') as f: 
-       while True: 
-           block = f.read(BLOCK_SIZE) 
-           if block: 
-               yield block 
-           else: 
-               return
+if __name__ == "__main__":
+    file_path = "testfile/test.txt"
+    block_size = 500*1024*1024 #500M
+    num_blocks = os.stat(file_path).st_size/block_size
+    files = split_file(file_path, block_size)
+    nw_merge(files)
